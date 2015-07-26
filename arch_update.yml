@@ -1,0 +1,17 @@
+---
+- name: Run system update
+  hosts: allpis
+  sudo: true
+  tasks: 
+  - name: Execute system update
+    command: /usr/bin/pacman -Syu --noconfirm
+
+- name: Restart docker
+  hosts: dockerpis
+  sudo: true
+  tasks:
+  - name: Reload Daemons
+    command: systemctl daemon-reload
+    
+  - name: Restart Docker
+    service: name=docker state=restarted

@@ -1,0 +1,6 @@
+---
+- name: "ALARM PI | System Preparation | Set Hostname manually via file"
+  lineinfile: "dest=/etc/hostname regexp='^alarmpi' line='{{ alarm_hostname }}'"
+
+- name: "ALARM PI | System Preparation | Set Hostname via command"
+  command: "hostname {{ alarm_hostname }}"

@@ -1,0 +1,22 @@
+---
+- name: "Docker | Install Docker"
+  pacman: "pkg=docker update_cache=yes"
+  ignore_errors: yes
+
+- name: "Docker | Install docker-py"
+  pip: name=docker-py version=1.1.0
+  ignore_errors: yes
+
+- name: "Docker | Enable Docker on startup"
+  service: name=docker enabled=true
+  ignore_errors: yes
+
+- name: "Docker | Modify service configuration to prevent inter-container communication"
+  lineinfile: "dest=/usr/lib/systemd/system/docker.service regexp='^ExecStart=/usr/bin/docker -d -H fd://' line='ExecStart=/usr/bin/docker -d -H fd:// --icc=false --iptables=true'"
+
+- name: "Docker | Reload daemons"
+  command: systemctl daemon-reload
+  ignore_errors: yes
+
+- name: "Docker | Restart Docker"
+  service: name=docker state=restarted

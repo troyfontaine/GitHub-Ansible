@@ -1,0 +1,56 @@
+---
+- name: "ALARM | System Preparation | Install sudo and Python packages"
+  pacman: "pkg={{ item }} update_cache=yes"
+  with_items:
+    - sudo
+    - python2-pip
+    - python2-requests
+    - python2-setuptools
+    - python2-py
+    - rsync
+
+# We need a symlink for Python on ALARM in order to execute it via Ansible
+
+- name: "ALARM | System Preparation | Check /usr/bin/python Symlink to see if it exists"
+  stat: path=/usr/bin/python
+  register: python
+
+- name: "ALARM | System Preparation | Delete the symlink if it exists"
+  file: path=/usr/bin/python state=absent
+  when: python.stat.isdir is defined and python.stat.isdir
+
+- name: "ALARM | System Preparation | Setup the python2 symlink"
+  file: >
+        src=/usr/bin/python2
+        dest=/usr/bin/python
+        state=link
+        mode=0755
+        force=yes
+
+# We need a symlink for PIP on ALARM in order to execute it via Ansible
+
+- name: "ALARM | System Preparation | Check /usr/bin/pip Symlink to see if it exists"
+  stat: path=/usr/bin/pip
+  register: piplink
+
+- name: "ALARM | System Preparation | Delete the pip symlink if it exists"
+  file: path=/usr/bin/pip state=absent
+  when: piplink.stat.isdir is defined and python.stat.isdir
+
+- name: "ALARM | System Preparation | Setup the pip2 symlink"
+  file: >
+        src=/usr/bin/pip2
+        dest=/usr/bin/pip
+        state=link
+        mode=0755
+        force=yes
+
+# We need a central directory to store our application support files
+
+- name: "ALARM | System Preparation | Check if MyApp directory exists"
+  stat: path=/MyApp
+  register: myapp
+
+- name: "ALARM | System Preparation | Create MyApp Directory"
+  file: path=/myapp state=directory mode=0755
+  when: myapp.stat.exists == False

@@ -1,0 +1,35 @@
+---
+# Change root password first and foremost
+
+- name: "ALARM | System Security | Update root password"
+  user: name=root password=$1$Ve4t11ca$5P5iAttpyC2v7KpA.5b3W1
+
+- name: "ALARM | System Security | Add admin group"
+  group: name=admin
+  ignore_errors: yes
+
+- name: "ALARM | System Security | Set up management user account"
+  user: name=tfontaine shell=/bin/bash append=yes groups=admin
+  ignore_errors: yes
+
+- name: "ALARM | System Security | Set management user SSH Key"
+  authorized_key: user=tfontaine key=https://github.com/troyfontaine.keys
+
+# Modify sudoers information after creating new user
+
+- name: "ALARM | System Security | Verify sudoers file exists"
+  stat: path=/etc/sudoers
+  register: sudoers
+
+- name: "ALARM | System Security | Disable SUDO password prompt"
+  lineinfile: "dest=/etc/sudoers state=present regexp='^{{ '#' }} %wheel ALL=(ALL) ALL' line='%ADMIN ALL=(ALL) NOPASSWD: ALL' validate='visudo -cf %s'"
+  when: sudoers.stat.exists == True
+
+- name: "ALARM | System Security | Securing SSH (Disabling Root login)"
+  lineinfile: "dest=/etc/ssh/sshd_config regexp='^{{ '#' }}PermitRootLogin yes' line='PermitRootLogin no'"
+
+- name: "ALARM | System Security | Securing SSH (Disabling password authentication)"
+  lineinfile: "dest=/etc/ssh/sshd_config regexp='^{{ '#' }}PasswordAuthentication yes' line='PasswordAuthentication no'"
+
+- name: "ALARM | System Security | Restart sshd to apply settings"
+  service: name=sshd state=restarted

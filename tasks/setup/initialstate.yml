@@ -1,0 +1,9 @@
+---
+- name: "ALARM | System Preparation | Install InitialState"
+  pip: name=isstreamer
+
+- name: "ALARM | System Preparation | Copy InitialState Configuration"
+  copy: "src=./files/initialstate/{{ isconf_file }} dest=/myapp/initialstate/{{ isconf_file }} owner=root mode=0755"
+
+- name: "ALARM | System Preparation | Launch InitialState"
+  command: "python /myapp/initialstate/{{ isconf_file }}"
