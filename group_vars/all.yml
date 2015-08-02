@@ -1,0 +1,12 @@
+---
+haproxy_volumes:
+  - "/myapp/haproxy/config:/haproxy-override:ro"
+  - "/myapp/haproxy/tls:/etc/ssl:ro"
+
+haproxy_ports:
+  - "80:80"
+  - "443:443"
+
+nginx_volumes:
+  - "/myapp/nginx/sites-enabled:/etc/nginx/sites-enabled:ro"
+  - "/myapp/nginx/html:/var/www/html:ro"

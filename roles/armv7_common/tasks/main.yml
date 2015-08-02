@@ -1,0 +1,65 @@
+---
+- name: "Archlinux | System Preparation | Install Python packages and rsync"
+  pacman: pkg={{ item }} update_cache=yes
+  with_items:
+    - python2-pip
+    - python2-requests
+    - python2-setuptools
+    - python2-py
+    - rsync
+
+# Set system hostnames where applicable
+- {include: archlinux_hostname.yml, alarm_hostname: "CTL-R2001", when: ansible_eth0.ipv4.address == "192.168.0.51"}
+
+- {include: archlinux_hostname.yml, alarm_hostname: "CTL-R2002", when: ansible_eth0.ipv4.address == "192.168.0.52"}
+
+- {include: archlinux_hostname.yml, alarm_hostname: "CTL-R2003", when: ansible_eth0.ipv4.address == "192.168.0.53"}
+
+# We need a central directory to store our application support files
+- name: "Generic | System Preparation | Check if MyApp directory exists"
+  stat: path=/MyApp
+  register: myapp
+
+- name: "Generic | System Preparation | Create MyApp Directory"
+  file: path=/myapp state=directory mode=0755
+  when: myapp.stat.exists == False
+
+# Change root password first and foremost
+
+- name: "Generic | System Security | Update root password"
+  user: "name=root password={{ arch_root_pw }}"
+
+- name: "Generic | System Security | Securing SSH (Disabling Root login)"
+  lineinfile: "dest=/etc/ssh/sshd_config regexp='^{{ '#' }}PermitRootLogin yes' line='PermitRootLogin no'"
+
+- name: "Generic | System Security | Securing SSH (Disabling password authentication)"
+  lineinfile: "dest=/etc/ssh/sshd_config regexp='^{{ '#' }}PasswordAuthentication yes' line='PasswordAuthentication no'"
+
+- name: "Generic| System Preparation | Check if MyApp directory exists"
+  stat: path=/myapp/initialstate
+  register: myapp
+
+- name: "Generic | System Preparation | Create MyApp Directory"
+  file: path=/myapp/initialstate state=directory mode=0755
+  when: myapp.stat.exists == False
+
+- {include: initialstate.yml, isconf_file: "{{ ansible_hostname }}.py" }
+
+- name: "Generic | System Security | Restart sshd to apply settings"
+  service: name=sshd state=restarted
+
+- name: "reboot"
+  shell: /sbin/shutdown -r -t 3
+  sudo: True
+  async: 1
+  poll: 0
+  ignore_errors: true
+
+# Wait for reboot to complete
+  # Timing specific to Raspberry Pi 2 Model B restart time with Class 10 MicroSD card
+- name: "wait"
+  sudo: False
+  local_action: "wait_for port=22 host={{ ansible_hostname }} state=started search_regex=OpenSSH delay=65"
+  #when: ansible_architecture == "armv7l"
+
+

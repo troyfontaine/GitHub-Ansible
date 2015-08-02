@@ -1,0 +1,20 @@
+---
+ # Ubuntu
+- name: "Debian & Derivatives | System Preparation | Install sudo and Python packages"
+  apt: "pkg={{ item }} update_cache=yes cache_valid_time=3600"
+  with_items:
+    - wget
+    - python-pip
+    - python2-py
+    - rsync
+    - ntpd
+  when: ansible_pkg_mgr == "apt"
+
+- name: "Docker | Install Docker on ubuntu"
+  command: "wget -qO- https://get.docker.com/ | sh"
+  when: ansible_os_family == "Ubuntu"
+
+# Ubuntu with Upstart
+- name: "Docker | Modify service configuration to prevent inter-container communication"
+  lineinfile: "dest=/etc/default/docker regexp='^{{ '#' }}DOCKER_OPTS=\"--dns 8.8.8.8 --dns 8.8.4.4\"' line='DOCKER_OPTS=\"-H fd:// --icc=false\"'"
+  when: ansible_os_family == 'Ubuntu' and ansible_distribution_version | version_compare('14.04', '<=') }

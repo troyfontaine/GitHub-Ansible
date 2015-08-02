@@ -1,0 +1,69 @@
+---
+# This playbook is required to set the Raspberry Pi 2 Model B units up for Ansible to
+# be able to work with them.
+# We also have to perform the preliminary security modifications in this playbook so
+# that if using other generic playbooks we don't have to do any other modifications
+# to use them on Arch.
+
+# Install Python2 on Arch Linux
+- name: "Archlinux | Setup | Install Python 2 (This can take quite a while)"
+  raw: pacman -Syu python2  --noconfirm
+  ignore_errors: yes
+
+# We need a symlink for Python on Archlinux in order to execute it via Ansible
+
+- name: "Archlinux | System Preparation | Check /usr/bin/python Symlink to see if it exists"
+  stat: path=/usr/bin/python
+  register: python
+
+- name: "Archlinux | System Preparation | Delete the symlink if it exists"
+  file: path=/usr/bin/python state=absent
+  when: python.stat.isdir is defined and python.stat.isdir
+
+- name: "Archlinux | System Preparation | Setup the python2 symlink"
+  file: >
+        src=/usr/bin/python2
+        dest=/usr/bin/python
+        state=link
+        mode=0755
+
+# We need a symlink for PIP on Archlinux in order to execute it via Ansible
+
+- name: "Archlinux | System Preparation | Check /usr/bin/pip Symlink to see if it exists"
+  stat: path=/usr/bin/pip
+  register: piplink
+
+- name: "Archlinux | System Preparation | Delete the pip symlink if it exists"
+  file: path=/usr/bin/pip state=absent
+  when: piplink.stat.isdir is defined and piplink.stat.isdir
+
+- name: "Archlinux | System Preparation | Setup the pip2 symlink"
+  file: >
+        src=/usr/bin/pip2
+        dest=/usr/bin/pip
+        state=link
+        mode=0755
+        force=yes
+
+# Install our minimum dependencies
+- name: "Archlinux | System Preparation | Install sudo and Python packages"
+  pacman: pkg=sudo update_cache=yes
+
+- name: "Generic | System Security | Add admin group"
+  group: name=admin
+
+- name: "Generic | System Security | Set up management user account"
+  user: name=tfontaine shell=/bin/bash append=yes groups=admin
+
+- name: "Generic | System Security | Set management user SSH Key"
+  authorized_key: user=tfontaine key=https://github.com/troyfontaine.keys
+
+  # Modify sudoers information after creating new user
+
+- name: "Generic | System Security | Verify sudoers file exists"
+  stat: path=/etc/sudoers
+  register: sudoers
+
+- name: "Generic | System Security | Disable SUDO password prompt"
+  lineinfile: "dest=/etc/sudoers state=present regexp='^{{ '#' }} %wheel ALL=(ALL) ALL' line='%ADMIN ALL=(ALL) NOPASSWD: ALL' validate='visudo -cf %s'"
+  when: sudoers.stat.exists == True

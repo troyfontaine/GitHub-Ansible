@@ -1,0 +1,29 @@
+---
+# Install Docker
+- name: "Docker | Install Docker using pacman"
+  pacman: "pkg=docker update_cache=yes"
+  ignore_errors: yes
+  when: ansible_os_family == "Archlinux"
+
+# Install Docker-Py to allow ansible to manager Docker
+- name: "Docker | Install docker-compose"
+  pip: name={{ item }}
+  with_items:
+    - docker-compose version=1.3.3
+
+- name: "Docker | Enable Docker on startup"
+  service: name=docker enabled=true
+  ignore_errors: yes
+
+# Modify Docker configuration to prevent inter-container communication unless explicitly configured
+  # Distros with systemd
+- name: "Docker | Modify service configuration to prevent inter-container communication"
+  lineinfile: "dest=/usr/lib/systemd/system/docker.service regexp='^ExecStart=/usr/bin/docker -d -H fd://' line='ExecStart=/usr/bin/docker -d -H fd:// --icc=false'"
+
+# Reload daemons on systems using systemd
+- name: "Docker | Reload daemons"
+  command: systemctl daemon-reload
+  ignore_errors: yes
+
+- name: "Docker | Restart Docker"
+  service: name=docker state=restarted

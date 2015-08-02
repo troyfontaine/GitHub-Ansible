@@ -1,0 +1,19 @@
+---
+# Execute this playbook using the following argument "--vault-password-file ~/.password.txt"
+- name: "Pi Cluster | Set up Docker Cluster"
+  hosts: dockerpis
+  sudo: True
+  vars:
+
+
+  pre_tasks:
+    - include_vars: secure.yml
+
+  roles:
+    - armv7_common
+    - armv7_docker
+
+  tasks:
+    - include: tasks/picluster.yml
+
+  post_tasks:

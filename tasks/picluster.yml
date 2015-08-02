@@ -1,0 +1,64 @@
+---
+# We need a central directory to store our application support files
+- name: "PiCluster | Docker Setup | Check if haproxy directory exists"
+  stat: path=/myapp/haproxy
+  register: haproxydir
+  when: ansible_hostname == "CTL-R2001"
+
+- name: "PiCluster | Docker Setup | Create haproxy Directory"
+  file: path=/myapp/haproxy state=directory mode=0755
+  when: haproxydir.stat.exists == False
+  when: ansible_hostname == "CTL-R2001"
+
+- name: "PiCluster | Docker Setup | Check if nginx directory exists"
+  stat: path=/myapp/nginx
+  register: nginxdir
+  when: ansible_hostname == "CTL-R2002" or ansible_hostname == "CTL-R2003"
+
+- name: "PiCluster | Docker Setup | Create nginx Directory"
+  file: path=/myapp/nginx state=directory mode=0755
+  when: nginxdir.stat.exists == False
+  when: ansible_hostname == "CTL-R2002" or ansible_hostname == "CTL-R2003"
+
+- name: "Docker | Synchronize haproxy.cfg to local system"
+  synchronize: src=./picluster/haproxy/config/http/ dest=/myapp/haproxy/config/
+  when: ansible_hostname == "CTL-R2001"
+
+- name: "Docker | Synchronize TLS Certificate for HAProxy to local system"
+  synchronize: src=./picluster/haproxy/tls/ dest=/myapp/haproxy/tls
+  when: ansible_hostname == "CTL-R2001"
+
+- name: "Docker | Synchronize Enabled Sites"
+  synchronize: src=./picluster/nginx/config/http/ dest=/myapp/nginx/sites-enabled
+  when: ansible_hostname == "CTL-R2002" or ansible_hostname == "CTL-R2003"
+
+- name: "Docker | Synchronize html files to server"
+  synchronize: src=./picluster/nginx/html dest=/myapp/nginx
+  when: ansible_hostname == "CTL-R2002" or ansible_hostname == "CTL-R2003"
+
+- name: "Docker | Launch HAProxy Container"
+  docker:
+    name: haproxy1
+    registry: DockerHub
+    image: "troyfontaine/armhf-haproxy"
+    volumes: "{{ haproxy_volumes }}"
+    ports: "{{ haproxy_ports }}"
+    state: started
+    hostname: haproxy1
+    restart_policy: always
+    restart_policy_retry: 2
+  when: ansible_hostname == "CTL-R2001"
+
+- name: "Docker | Launch Nginx Containers"
+  docker:
+    name: "nginx{{ item }}"
+    registry: DockerHub
+    image: "troyfontaine/armhf-nginx"
+    volumes: "{{ nginx_volumes }}"
+    ports: "800{{ item }}:80"
+    state: started
+    hostname: "nginx{{ item }}"
+    restart_policy: always
+    restart_policy_retry: 2
+  when: ansible_hostname == "CTL-R2002" or ansible_hostname == "CTL-R2003"
+  with_sequence: start=0 end=4
